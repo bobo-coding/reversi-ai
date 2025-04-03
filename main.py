@@ -63,8 +63,15 @@ def play_game(player1=None, player2=None, board_size=8, gui=True):
         
     return game.winner
 
-def train_dqn(num_episodes=1000, board_size=8, model_dir='models'):
-    """Train a DQN bot through self-play"""
+def train_dqn(num_episodes=1000, board_size=8, model_dir='models', opponent_type=None):
+    """Train a DQN bot through self-play or against a specific opponent
+    
+    Args:
+        num_episodes: Number of episodes to train
+        board_size: Size of the board
+        model_dir: Directory to save models
+        opponent_type: Type of opponent ('minimax', 'random', or None for self-play)
+    """
     # Create model directory if it doesn't exist
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
@@ -80,8 +87,19 @@ def train_dqn(num_episodes=1000, board_size=8, model_dir='models'):
         model_path=model_path
     )
     
+    # Create opponent if specified
+    opponent = None
+    if opponent_type == 'minimax':
+        print("Training against Minimax bot")
+        opponent = MinimaxBot(player_id=2, depth=3)
+    elif opponent_type == 'random':
+        print("Training against Random bot")
+        opponent = RandomBot(player_id=2)
+    else:
+        print("Training with self-play")
+    
     # Train the bot
-    trained_bot = trainer.train(num_episodes=num_episodes, save_interval=100)
+    trained_bot = trainer.train(num_episodes=num_episodes, save_interval=100, opponent=opponent)
     
     # Plot training progress if there's enough data
     if trainer.rewards_history:
@@ -146,6 +164,8 @@ def main():
     train_parser.add_argument('--episodes', type=int, default=1000, help='Number of episodes to train')
     train_parser.add_argument('--board-size', type=int, default=8, help='Board size')
     train_parser.add_argument('--model-dir', type=str, default='models', help='Directory to save models')
+    train_parser.add_argument('--opponent', choices=['minimax', 'random', 'self'], 
+                             default='self', help='Opponent to train against')
     
     args = parser.parse_args()
     
@@ -183,9 +203,11 @@ def main():
         play_game(player1, player2, args.board_size)
         
     elif args.command == 'train':
+        opponent_type = None if args.opponent == 'self' else args.opponent
         train_dqn(num_episodes=args.episodes, 
                   board_size=args.board_size, 
-                  model_dir=args.model_dir)
+                  model_dir=args.model_dir,
+                  opponent_type=opponent_type)
     
     else:
         parser.print_help()
